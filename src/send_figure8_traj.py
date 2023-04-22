@@ -310,6 +310,6 @@ def main(wp_dir, drone_id):
 
 
 if __name__ == '__main__':
-    waypoint_dir = '/home/yanrui89/storage/ros2_ws/src/crazyswarm2/crazyflie_examples/crazyflie_examples/data/figure8.csv'
+    waypoint_dir = '/home/rock/catkin_px4_offb/src/px4_offb_ctrl/data/figure8.csv'
     drone_id = sys.argv[1]
     main(waypoint_dir, drone_id)
