@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="_uav_idx" value="6" />
+    <arg name="_fcu_url" value="/dev/ttyAML0:230400" />
+    <arg name="_gcs_url" value="udp://@192.168.31.193" /> <!-- zt laptop -->
+
+    <!-- PX4 configs -->
+    <arg name="interactive" default="true"/>
+    <arg name="use_local_frame" default="false"/>
+    <arg name="takeoff_height" default="1.0"/>
+    <arg name="use_px4_ctrl" default="true"/>
+    <arg name="px4_ctrl_mode" default="pva"/>
+    <arg name="use_fastplanner" default="false"/>
+    <arg name="Tf" default="0.3"/>
+
+    <!-- Bspline configs -->
+    <arg name="use_bspline" default="true"/>
+    <arg name="order" default="4.0"/>
+    <arg name="max_velocity" default="0.5"/>
+    <arg name="knot_division" default="8"/>
+    
+
+    <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="$(arg _fcu_url)" />
+        <arg name="gcs_url" value="$(arg _gcs_url)" />
+        <arg name="tgt_system" value="$(arg _uav_idx)" />
+    </include>
+
+    <node pkg="px4_offb_ctrl" type="px4_offb_ctrl_node" name="px4_offb_node" output="screen">
+        <param name="use_px4_ctrl" value="$(arg use_px4_ctrl)"/>
+        <param name="mission_timer_interval" value="0.05"/>
+        <param name="takeoff_height" value="$(arg takeoff_height)"/>
+        <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
+        <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
+        <param name="use_bspline" value="$(arg use_bspline)"/>
+        <param name="order" value="$(arg order)"/>
+        <param name="max_velocity" value="$(arg max_velocity)"/>
+        <param name="knot_division" value="$(arg knot_division)"/>
+        <remap from="/planning/state" to="/planning/exec_state"/>
+
+        <remap from="/local_enu_traj" to="/planning/pos_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/planning/pos_cmd" unless="$(arg use_local_frame)"/>     
+        <!-- <remap from="/local_enu_traj" to="/pva_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/pva_cmd" unless="$(arg use_local_frame)"/>     -->
+
+        <param name="gains/p_x" value="6.0" />
+        <param name="gains/p_y" value="6.0" />
+        <param name="gains/p_z" value="10.0" />
+        <param name="gains/v_x" value="1.5" />
+        <param name="gains/v_y" value="1.5" />
+        <param name="gains/v_z" value="3.5" />
+    </node>
+
+    <node pkg="px4_offb_ctrl" type="traj_gen_node" name="traj_gen_node" output="screen">
+        <param name="Tf" value="$(arg Tf)"/>
+        <remap from="/odom" to="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
+        <remap from="/odom" to="/global_nwu_odom" unless="$(arg use_local_frame)"/> 
+    </node>
+
+
+
+
+    
+</launch>
