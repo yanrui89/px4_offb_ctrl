@@ -65,6 +65,8 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     _send_command_interval = mission_timer_interval;
     // end B-splines
 
+    user_start = false;
+
     mav_state_sub = _nh.subscribe("/mavros/state", 1, &OffboardNode::mavStateCallback, this);
 
     traj_local_enu_sub = _nh.subscribe("/local_enu_traj", 1, &OffboardNode::localENUTrajRefCallback, this);
@@ -76,6 +78,8 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     uav_local_enu_vel_sub = _nh.subscribe("/mavros/local_position/velocity_local", 1, &OffboardNode::uavENUVelCallback, this);
 
     planner_state_sub = _nh.subscribe("/planning/state", 1, &OffboardNode::plannerStateCallback, this);
+
+    user_start_sub = _nh.subscribe("/usr_start", 1, &OffboardNode::usrStartCallback, this);
 
     uav_global_nwu_pose_pub = _nh.advertise<geometry_msgs::PoseStamped>("/global_nwu_pose", 10);
 
@@ -125,6 +129,11 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     init_body_to_global_homo = Eigen::Affine3d::Identity();
     init_local_to_global_homo = init_body_to_global_homo * init_body_to_local_homo.inverse();
     global_to_local_homo = init_local_to_global_homo.inverse();
+}
+
+void OffboardNode::usrStartCallback(const std_msgs::Bool& msg)
+{
+    user_start = msg.data;
 }
 
 void OffboardNode::mavStateCallback(const mavros_msgs::State::ConstPtr& msg)
@@ -348,6 +357,8 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
     {
         case UAVState::INIT:
         {
+
+
             if (!have_pose || !have_vel)
                 return;
 
@@ -374,6 +385,10 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
 
                 set_init_local_pose = true;
             }
+
+            if (!user_start){
+                return;
+            }           
 
             if (!start_set_offb_thread && !set_offb_success)
             {

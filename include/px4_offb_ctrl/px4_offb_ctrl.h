@@ -68,6 +68,7 @@ class OffboardNode
     ros::Subscriber uav_local_enu_pose_sub; // Remark: should not use /mavros/local_position/odom for both pose and velocity as the twist in this topic
     ros::Subscriber uav_local_enu_vel_sub;
     ros::Subscriber planner_state_sub;
+    ros::Subscriber user_start_sub;
     ros::Publisher att_tgt_pub;
     ros::Publisher pos_tgt_pub;
     ros::Publisher uav_state_pub;
@@ -141,6 +142,8 @@ class OffboardNode
     double m_a_, m_b_, m_c_, volt_k_, volt_b_;
     double throttle_offset_, throttle_limit_;
 
+    bool user_start;
+
     Eigen::Vector4d q_des, uav_local_att;
 
     std::unique_ptr<offboard_controller::OffbCtrl> pos_ctrl;
@@ -202,6 +205,7 @@ public:
 
     void visualize_log_path();
     geometry_msgs::Point vector_to_point(Eigen::Vector3d v);
+    void usrStartCallback(const std_msgs::Bool& msg);
 
     inline void getStateString(std::string& state)
     {

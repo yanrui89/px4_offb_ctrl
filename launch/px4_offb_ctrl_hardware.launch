@@ -5,17 +5,11 @@
     <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
     <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
 
-    <!-- gazebo configs -->
-    <arg name="gui" default="false"/>
-    <arg name="debug" default="false"/>
-    <arg name="verbose" default="false"/>
-    <arg name="paused" default="false"/>
-    <arg name="respawn_gazebo" default="false"/>
 
     <!-- MAVROS configs -->
-    <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
-    <arg name="respawn_mavros" default="false"/>
-    <arg name="gcs" default="udp://@127.0.0.1"/>
+    <arg name="_fcu_url" value="/dev/ttyAML0:230400" />
+    <arg name="_gcs_url" value="udp://@192.168.31.193" /> <!-- zt laptop -->
+    <arg name="_uav_idx" value="1" />
 
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
@@ -32,43 +26,18 @@
     <arg name="max_velocity" default="0.5"/>
     <arg name="knot_division" default="8"/>
 
-    <!-- vehicle configs -->
-    <arg name="x" value="0"/>
-    <arg name="y" value="0"/>
-    <arg name="z" value="0"/>
-    <arg name="R" default="0"/>
-    <arg name="P" default="0"/>
-    <arg name="Y" default="0"/>
-
-    <!-- PX4 SITL and Gazebo -->
-    <include file="$(find px4)/launch/posix_sitl.launch">
-        <arg name="x" value="$(arg x)"/>
-        <arg name="y" value="$(arg y)"/>
-        <arg name="z" value="$(arg z)"/>
-        <arg name="R" value="$(arg R)"/>
-        <arg name="P" value="$(arg P)"/>
-        <arg name="Y" value="$(arg Y)"/>
-        <arg name="world" value="$(arg world)"/>
-        <arg name="vehicle" value="$(arg vehicle)"/>
-        <arg name="sdf" value="$(arg sdf)"/>
-        <arg name="gui" value="$(arg gui)"/>
-        <arg name="interactive" value="$(arg interactive)"/>
-        <arg name="debug" value="$(arg debug)"/>
-        <arg name="verbose" value="$(arg verbose)"/>
-        <arg name="paused" value="$(arg paused)"/>
-        <arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
-    </include>
 
     <!-- Mavros -->
     <include file="$(find mavros)/launch/px4.launch">
-        <arg name="fcu_url" value="$(arg fcu_url)"/>
-        <arg name="gcs_url" value=""/>
-        <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
+        <arg name="fcu_url" value="$(arg _fcu_url)"/>
+        <arg name="gcs_url" value="$(arg _fcu_url)"/>
+        <arg name="tgt_system" value="$(arg _uav_idx)" />
+
     </include>
 
     <node pkg="px4_offb_ctrl" type="px4_offb_ctrl_node" name="px4_offb_node" output="screen">
         <param name="use_px4_ctrl" value="$(arg use_px4_ctrl)"/>
-        <param name="mission_timer_interval" value="0.01"/>
+        <param name="mission_timer_interval" value="0.05"/>
         <param name="takeoff_height" value="$(arg takeoff_height)"/>
         <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
         <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
@@ -96,8 +65,6 @@
         <remap from="/odom" to="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
         <remap from="/odom" to="/global_nwu_odom" unless="$(arg use_local_frame)"/> 
     </node>
-
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pbtm)/rviz/display.rviz" />
 
 
 </launch>
