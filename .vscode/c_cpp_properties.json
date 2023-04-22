@@ -1,0 +1,43 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/bspline/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/bspline_opt/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/mavros_controllers/controller_msgs/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/fisheyedepth/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/mavros_controllers/geometric_controller/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/mav_comm/mav_msgs/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/mav_comm/mav_planning_msgs/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/Utils/multi_map_server/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/path_searching/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/plan_env/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/plan_manage/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/poly_traj/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/Utils/pose_utils/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/px4_offb_ctrl/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/Utils/quadrotor_msgs/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/ros_unity_tcp/ros_unity/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/so3_control/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/so3_disturbance_generator/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/so3_quadrotor_simulator/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/fast_planner/traj_utils/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/mavros_controllers/trajectory_publisher/include/**",
+        "/home/tlabstaff/catkin_ws_fastplanner_unity/src/e2e_navigation/Fast-Planner/uav_simulator/Utils/uav_utils/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

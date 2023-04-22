@@ -1,0 +1,103 @@
+<launch>
+    <!-- vehicle model and world -->
+    <arg name="est" default="ekf2"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
+    <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
+
+    <!-- gazebo configs -->
+    <arg name="gui" default="false"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/>
+    <arg name="respawn_gazebo" default="false"/>
+
+    <!-- MAVROS configs -->
+    <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
+    <arg name="respawn_mavros" default="false"/>
+    <arg name="gcs" default="udp://@127.0.0.1"/>
+
+    <!-- PX4 configs -->
+    <arg name="interactive" default="true"/>
+    <arg name="use_local_frame" default="false"/>
+    <arg name="takeoff_height" default="1.0"/>
+    <arg name="use_px4_ctrl" default="true"/>
+    <arg name="px4_ctrl_mode" default="pva"/>
+    <arg name="use_fastplanner" default="false"/>
+    <arg name="Tf" default="0.3"/>
+
+    <!-- Bspline configs -->
+    <arg name="use_bspline" default="true"/>
+    <arg name="order" default="4.0"/>
+    <arg name="max_velocity" default="0.5"/>
+    <arg name="knot_division" default="8"/>
+
+    <!-- vehicle configs -->
+    <arg name="x" value="0"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0"/>
+
+    <!-- PX4 SITL and Gazebo -->
+    <include file="$(find px4)/launch/posix_sitl.launch">
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="R" value="$(arg R)"/>
+        <arg name="P" value="$(arg P)"/>
+        <arg name="Y" value="$(arg Y)"/>
+        <arg name="world" value="$(arg world)"/>
+        <arg name="vehicle" value="$(arg vehicle)"/>
+        <arg name="sdf" value="$(arg sdf)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="interactive" value="$(arg interactive)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="verbose" value="$(arg verbose)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
+    </include>
+
+    <!-- Mavros -->
+    <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="gcs_url" value=""/>
+        <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
+    </include>
+
+    <node pkg="px4_offb_ctrl" type="px4_offb_ctrl_node" name="px4_offb_node" output="screen">
+        <param name="use_px4_ctrl" value="$(arg use_px4_ctrl)"/>
+        <param name="mission_timer_interval" value="0.01"/>
+        <param name="takeoff_height" value="$(arg takeoff_height)"/>
+        <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
+        <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
+        <param name="use_bspline" value="$(arg use_bspline)"/>
+        <param name="order" value="$(arg order)"/>
+        <param name="max_velocity" value="$(arg max_velocity)"/>
+        <param name="knot_division" value="$(arg knot_division)"/>
+        <remap from="/planning/state" to="/planning/exec_state"/>
+
+        <remap from="/local_enu_traj" to="/planning/pos_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/planning/pos_cmd" unless="$(arg use_local_frame)"/>     
+        <!-- <remap from="/local_enu_traj" to="/pva_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/pva_cmd" unless="$(arg use_local_frame)"/>     -->
+
+        <param name="gains/p_x" value="6.0" />
+        <param name="gains/p_y" value="6.0" />
+        <param name="gains/p_z" value="10.0" />
+        <param name="gains/v_x" value="1.5" />
+        <param name="gains/v_y" value="1.5" />
+        <param name="gains/v_z" value="3.5" />
+    </node>
+
+    <node pkg="px4_offb_ctrl" type="traj_gen_node" name="traj_gen_node" output="screen">
+        <param name="Tf" value="$(arg Tf)"/>
+        <remap from="/odom" to="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
+        <remap from="/odom" to="/global_nwu_odom" unless="$(arg use_local_frame)"/> 
+    </node>
+
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find pbtm)/rviz/display.rviz" />
+
+
+</launch>

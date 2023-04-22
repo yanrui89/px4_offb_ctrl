@@ -1,0 +1,196 @@
+<launch>
+
+    <!-- vehicle model and world -->
+    <arg name="est" default="ekf2"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
+    <arg name="sdf" default="$(find mavlink_sitl_gazebo)/models/$(arg vehicle)/$(arg vehicle).sdf"/>
+
+    <!-- gazebo configs -->
+    <arg name="gui" default="false"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/>
+    <arg name="respawn_gazebo" default="false"/>
+    <!-- MAVROS configs -->
+    <arg name="fcu_url" default="udp://:14540@localhost:14580"/>
+    <arg name="respawn_mavros" default="false"/>
+    <!-- PX4 configs -->
+    <arg name="interactive" default="true"/>
+
+    <arg name="use_local_frame" default="false"/>
+    <arg name="takeoff_height" default="1.0"/>
+    <arg name="use_px4_ctrl" default="false"/>
+    <arg name="px4_ctrl_mode" default="pva"/>
+    <arg name="use_fastplanner" default="true"/>
+    <arg name="Tf" default="0.3"/>
+
+    <arg name="max_vel" default="3.0" />
+    <arg name="max_acc" default="7.0" />
+
+    <!-- vehicle configs -->
+    <arg name="x" value="0"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0"/>
+
+    <!-- PX4 SITL and Gazebo -->
+    <include file="$(find px4)/launch/posix_sitl.launch">
+        <arg name="x" value="$(arg x)"/>
+        <arg name="y" value="$(arg y)"/>
+        <arg name="z" value="$(arg z)"/>
+        <arg name="R" value="$(arg R)"/>
+        <arg name="P" value="$(arg P)"/>
+        <arg name="Y" value="$(arg Y)"/>
+        <arg name="world" value="$(arg world)"/>
+        <arg name="vehicle" value="$(arg vehicle)"/>
+        <arg name="sdf" value="$(arg sdf)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="interactive" value="$(arg interactive)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="verbose" value="$(arg verbose)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="respawn_gazebo" value="$(arg respawn_gazebo)"/>
+    </include>
+    <!-- Mavros -->
+    <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="gcs_url" value=""/>
+        <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
+    </include>
+
+    <node pkg="px4_offb_ctrl" type="px4_offb_ctrl_node" name="px4_offb_node" output="screen">
+        <param name="use_px4_ctrl" value="$(arg use_px4_ctrl)"/>
+        <param name="mission_timer_interval" value="0.05"/>
+        <param name="takeoff_height" value="$(arg takeoff_height)"/>
+        <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
+        <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
+        <remap from="/planning/state" to="/planning/exec_state"/>
+
+        <remap from="/local_enu_traj" to="/planning/pos_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/planning/pos_cmd" unless="$(arg use_local_frame)"/>     
+        <!-- <remap from="/local_enu_traj" to="/pva_cmd" if="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_traj" to="/pva_cmd" unless="$(arg use_local_frame)"/>     -->
+
+        <param name="gains/p_x" value="6.0" />
+        <param name="gains/p_y" value="6.0" />
+        <param name="gains/p_z" value="10.0" />
+        <param name="gains/v_x" value="1.5" />
+        <param name="gains/v_y" value="1.5" />
+        <param name="gains/v_z" value="3.5" />
+    </node>
+
+    <node pkg="px4_offb_ctrl" type="traj_gen_node" name="traj_gen_node" output="screen">
+        <param name="Tf" value="$(arg Tf)"/>
+        <remap from="/odom" to="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
+        <remap from="/odom" to="/global_nwu_odom" unless="$(arg use_local_frame)"/> 
+    </node>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="global2world" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 /world /global_nwu"/>
+
+    <!-- size of map, change the size in x, y, z according to your application -->
+    <arg name="map_size_x" value="40.0"/>
+    <arg name="map_size_y" value="40.0"/>
+    <arg name="map_size_z" value=" 5.0"/>
+
+    <!-- topic of your odometry such as VIO or LIO -->
+    <arg name="odom_topic" value="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
+    <arg name="odom_topic" value="/global_nwu_odom" unless="$(arg use_local_frame)"/>
+
+
+    <!-- main algorithm params -->
+    <include file="$(find plan_manage)/launch/kino_algorithm.xml">
+
+        <arg name="map_size_x_" value="$(arg map_size_x)"/>
+        <arg name="map_size_y_" value="$(arg map_size_y)"/>
+        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="odometry_topic" value="$(arg odom_topic)"/>
+
+        <!-- camera pose: transform of camera frame in the world frame -->
+        <!-- depth topic: depth image, 640x480 by default -->
+        <!-- don't set cloud_topic if you already set these ones! -->
+        <arg name="camera_pose_topic" value="/pcl_render_node/camera_pose"/>
+        <arg name="depth_topic" value="/pcl_render_node/depth"/>
+
+        <!-- topic of point cloud measurement, such as from LIDAR  -->
+        <!-- don't set camera pose and depth, if you already set this one! -->
+        <arg name="cloud_topic" value="/pcl_render_node/cloud"/>
+
+        <!-- intrinsic params of the depth camera -->
+        <arg name="cx" value="321.04638671875"/>
+        <arg name="cy" value="243.44969177246094"/>
+        <arg name="fx" value="387.229248046875"/>
+        <arg name="fy" value="387.229248046875"/>
+
+        <!-- maximum velocity and acceleration the drone will reach -->
+        <arg name="max_vel" value="$(arg max_vel)" />
+        <arg name="max_acc" value="$(arg max_acc)" />
+
+        <!-- 1: use 2D Nav Goal to select goal  -->
+        <!-- 2: use global waypoints below  -->
+        <arg name="flight_type" value="1" />
+        
+        <!-- global waypoints -->
+        <!-- If flight_type is set to 2, the drone will travel these waypoints one by one -->
+        <arg name="point_num" value="2" />
+
+        <arg name="point0_x" value="19.0" />
+        <arg name="point0_y" value="0.0" />
+        <arg name="point0_z" value="1.0" />
+
+        <!-- set more waypoints if you need -->
+        <arg name="point1_x" value="-19.0" />
+        <arg name="point1_y" value="0.0" />
+        <arg name="point1_z" value="1.0" />
+
+        <arg name="point2_x" value="0.0" />
+        <arg name="point2_y" value="19.0" />
+        <arg name="point2_z" value="1.0" />
+    
+    </include>
+
+    <!-- trajectory server -->
+    <node pkg="plan_manage" name="traj_server" type="traj_server" output="screen">
+        <remap from="/position_cmd" to="planning/pos_cmd"/>
+
+        <param name="Tf" value="$(arg Tf)"/>
+
+        <remap from="/odom_world" to="$(arg odom_topic)"/>
+        <param name="traj_server/time_forward" value="1.5" type="double"/>
+    </node>
+
+    <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+        <remap from="~odom" to="$(arg odom_topic)"/>        
+        <remap from="~goal" to="/move_base_simple/goal"/>
+        <remap from="~traj_start_trigger" to="/traj_start_trigger" />
+        <param name="waypoint_type" value="manual-lonely-waypoint"/>    
+    </node>
+
+    <!-- use simulator -->
+    <include file="$(find plan_manage)/launch/simulator.xml">
+        <arg name="map_size_x_" value="$(arg map_size_x)"/>
+        <arg name="map_size_y_" value="$(arg map_size_y)"/>
+        <arg name="map_size_z_" value="$(arg map_size_z)"/>
+        <arg name="c_num" value="10"/>
+        <arg name="p_num" value="150"/>
+
+        <arg name="odometry_topic" value="$(arg odom_topic)" />
+    </include>
+
+    <!-- Fisheye Depth -->
+    <include file="$(find fed_ros)/launch/ds_sp_sgm_s_0.5_simu.launch">
+        <arg name="offset_x" value="0" />
+        <arg name="offset_y" value="0" />
+        <arg name="crop_w" value="720" />
+        <arg name="crop_h" value="540" />
+        <arg name="scale" value="0.5" />
+        <arg name="leftImage_topic" value="/fisheye_image_left"/>
+        <arg name="rightImage_topic" value="/fisheye_image_right"/>
+    </include>
+
+  <!-- rviz -->
+  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find plan_manage)/config/traj.rviz" />
+
+</launch>
