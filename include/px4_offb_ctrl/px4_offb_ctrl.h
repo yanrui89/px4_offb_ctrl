@@ -28,6 +28,7 @@
 #include <nav_msgs/Odometry.h>
 #include <quadrotor_msgs/PositionCommand.h>
 #include <px4_offb_ctrl/setInitGlobalPose.h>
+#include <px4_offb_ctrl/takeoffExternal.h>
 #include "offb_ctrl.h"
 #include "bspline_utils.hpp"
 
@@ -77,6 +78,7 @@ class OffboardNode
     ros::Publisher _log_path_pub;
     ros::ServiceClient set_mode_client;
     ros::ServiceClient arming_client;
+    ros::ServiceClient external_takeoff_client;
     ros::ServiceServer reset_init_global_pose_server;
 
     ros::Subscriber global_nwu_vel_ref_sub;
@@ -98,10 +100,12 @@ class OffboardNode
     mavros_msgs::PositionTarget pos_sp_target;
     mavros_msgs::State mav_state;
 
+    px4_offb_ctrl::takeoffExternal takeoff_srv;
+
     geometry_msgs::PoseStamped global_nwu_pose_msg;
     nav_msgs::Odometry global_nwu_odom_msg;
 
-    Eigen::Vector3d ref_local_enu_pos, ref_local_enu_vel, ref_local_enu_acc;
+    Eigen::Vector3d ref_local_enu_pos, ref_local_enu_vel, ref_local_enu_acc, init_rel_local_enu_pos;
     Eigen::Vector3d ref_global_nwu_pos, ref_global_nwu_vel, ref_global_nwu_acc;
     double ref_local_yaw, ref_global_yaw;
     Eigen::Vector4d cmdBodyRate_;
@@ -164,6 +168,11 @@ class OffboardNode
     vector<Eigen::Vector3d> control_points;
     Eigen::Vector3d curr_cp;
     nav_msgs::Path path;
+
+    /** @brief use external pub parameters **/
+    bool _use_external_pub;
+    bool _takeoff_sent;
+    bool _use_external_rel_pub;
 
 
     time_point<std::chrono::system_clock> stime; // start time for bspline server in time_t

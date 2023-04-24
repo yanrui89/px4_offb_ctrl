@@ -24,6 +24,10 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     _nh.param<double>("max_velocity", _max_velocity, 2.0);
     _nh.param<int>("knot_division", _knot_division, 3);
 
+    /** @brief External Publisher params*/
+    _nh.param<bool>("use_external_pub", _use_external_pub, true);
+    _nh.param<bool>("use_external_rel_pub", _use_external_pub, true);
+
     /** @brief Control gains**/
     _nh.param<double>("gains/p_x", Kpos_x_, 8.0);
     _nh.param<double>("gains/p_y", Kpos_y_, 8.0);
@@ -65,6 +69,8 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     _send_command_interval = mission_timer_interval;
     // end B-splines
 
+    // takeoff external
+    _takeoff_sent = false;
     user_start = false;
 
     mav_state_sub = _nh.subscribe("/mavros/state", 1, &OffboardNode::mavStateCallback, this);
@@ -96,6 +102,8 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     set_mode_client = _nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
 
     arming_client = _nh.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
+
+    external_takeoff_client = _nh.serviceClient<px4_offb_ctrl::takeoffExternal>("/external_takeoff");
 
     reset_init_global_pose_server = _nh.advertiseService("/reset_init_global_nwu_pose", &OffboardNode::resetInitGlobalPoseCallback, this);
 
@@ -242,9 +250,24 @@ void OffboardNode::globalNWUTrajRefCallback(const quadrotor_msgs::PositionComman
 
 void OffboardNode::localENUTrajRefCallback(const quadrotor_msgs::PositionCommand::ConstPtr& msg)
 {
+    if (_use_external_rel_pub)
+    {
+        tf2::Quaternion traj_enu_tf2_q(uav_local_att(1),
+                                uav_local_att(2),
+                                uav_local_att(3),
+                                uav_local_att(0));
+        tf2::Matrix3x3 traj_enu_tf2_rot(traj_enu_tf2_q);
+        double r, p, y;
+        traj_enu_tf2_rot.getRPY(r, p, y);
+        ref_local_yaw = y;
+        tf::pointMsgToEigen(msg->position, ref_local_enu_pos);
+        ref_local_enu_pos = ref_local_enu_pos + init_rel_local_enu_pos;
+        tf::vectorMsgToEigen(msg->velocity, ref_local_enu_vel);
+        tf::vectorMsgToEigen(msg->acceleration, ref_local_enu_acc);
+        
+    }
     tf::pointMsgToEigen(msg->position, ref_local_enu_pos);
-    tf::vectorMsgToEigen(msg->velocity, ref_local_enu_vel);
-    tf::vectorMsgToEigen(msg->acceleration, ref_local_enu_acc);
+
     ref_local_yaw = msg->yaw;
 }
 
@@ -400,7 +423,8 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
 
             if (set_offb_success)
             {
-                if (_use_bspline){
+                if (_use_bspline)
+                {
                     _bspline_setup = false;
                     while (!_bspline_setup){
                         wp_pos_vector.clear();
@@ -427,7 +451,12 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
                     printf("[%soffboardnode.cpp] %skTakeoff/kLand %sFinished setting up bspline!%s \n", 
 					        KGRN, KNRM, KBLU, KNRM); 
                 }
-                else{
+                else if (_use_external_pub)
+                {
+                    ref_local_enu_pos.z() = uav_local_enu_pos.z();
+                }
+                else
+                {
                     ref_local_enu_pos.z() += takeoff_height;
                 }
                 stime = std::chrono::system_clock::now();
@@ -447,6 +476,33 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
             sendCommand();
             if (_use_bspline){
                 if (b_spline_completed){
+                    ROS_INFO("Takeoff completed!");
+                    state_ = UAVState::MISSION;
+                }
+            }
+            else if (_use_external_pub)
+            {
+                if (!_takeoff_sent)
+                {
+                    std_msgs::Bool tmp_takeoff_param;
+                    std_msgs::Bool _takeoff_sent_tmp;
+                    tmp_takeoff_param.data = true;
+                    takeoff_srv.request.to_takeoff = tmp_takeoff_param;
+                    if (external_takeoff_client.call(takeoff_srv))
+                    {
+                        ROS_INFO("External take off service sent!");
+                        _takeoff_sent = takeoff_srv.response.success.data;
+                    }
+                    else
+                    {
+                        ROS_ERROR("Failed to call takeoff service. Trying again");
+                    }
+
+                    return;
+
+                }
+                if (std::abs(uav_local_enu_pos.z() - takeoff_height) < 0.05)
+                {
                     ROS_INFO("Takeoff completed!");
                     state_ = UAVState::MISSION;
                 }
@@ -479,6 +535,13 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
                 init_tf2_nwu_rot.getRPY(r, p, y);
                 ref_global_yaw = y;
                 convertGlobal2Local();
+            }
+            if (_use_external_rel_pub)
+            {
+                if (init_rel_local_enu_pos.z() < 0.5)
+                {
+                    init_rel_local_enu_pos = init_rel_local_enu_pos;
+                }
             }
             sendCommand();
         }
@@ -614,13 +677,15 @@ void OffboardNode::sendCommand()
     if (state_ == UAVState::TAKE_OFF)
     {
         
-        if (_use_bspline){
+        if (_use_bspline)
+        {
             if (update_get_command_by_time()){
                 sendPVACtrlCommand();
                 return;
             }
         }
-        else{
+        else
+        {
             sendPVACtrlCommand();
             // sendGeomCtrlCommand();
             return;

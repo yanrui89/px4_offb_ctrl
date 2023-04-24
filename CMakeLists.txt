@@ -36,6 +36,7 @@ add_subdirectory(rapid_traj_gen)
 add_service_files(
   FILES
   setInitGlobalPose.srv
+  takeoffExternal.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
