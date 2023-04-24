@@ -26,7 +26,7 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
 
     /** @brief External Publisher params*/
     _nh.param<bool>("use_external_pub", _use_external_pub, true);
-    _nh.param<bool>("use_external_rel_pub", _use_external_pub, true);
+    _nh.param<bool>("use_external_rel_pub", _use_external_rel_pub, true);
 
     /** @brief Control gains**/
     _nh.param<double>("gains/p_x", Kpos_x_, 8.0);
@@ -87,6 +87,8 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
 
     user_start_sub = _nh.subscribe("/usr_start", 1, &OffboardNode::usrStartCallback, this);
 
+    store_rel_pose_sub = _nh.subscribe("/usr_store", 1, &OffboardNode::usrStoreRelPoseCallback, this);
+
     uav_global_nwu_pose_pub = _nh.advertise<geometry_msgs::PoseStamped>("/global_nwu_pose", 10);
 
     uav_global_nwu_odom_pub = _nh.advertise<nav_msgs::Odometry>("/global_nwu_odom", 10);
@@ -138,6 +140,18 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     init_local_to_global_homo = init_body_to_global_homo * init_body_to_local_homo.inverse();
     global_to_local_homo = init_local_to_global_homo.inverse();
 }
+
+void OffboardNode::usrStoreRelPoseCallback(const std_msgs::Bool& msg)
+{
+    user_start = msg.data;
+    if (user_start)
+    {
+        init_rel_local_enu_pos = uav_local_enu_pos;
+        ROS_INFO("STORED NEW RELATIVE POSE!!");
+    }
+    
+}
+
 
 void OffboardNode::usrStartCallback(const std_msgs::Bool& msg)
 {
@@ -252,6 +266,8 @@ void OffboardNode::localENUTrajRefCallback(const quadrotor_msgs::PositionCommand
 {
     if (_use_external_rel_pub)
     {
+
+        std::cout << " I am inside here\n";
         tf2::Quaternion traj_enu_tf2_q(uav_local_att(1),
                                 uav_local_att(2),
                                 uav_local_att(3),
@@ -260,15 +276,24 @@ void OffboardNode::localENUTrajRefCallback(const quadrotor_msgs::PositionCommand
         double r, p, y;
         traj_enu_tf2_rot.getRPY(r, p, y);
         ref_local_yaw = y;
-        tf::pointMsgToEigen(msg->position, ref_local_enu_pos);
-        ref_local_enu_pos = ref_local_enu_pos + init_rel_local_enu_pos;
+        tf::pointMsgToEigen(msg->position, ref_local_enu_pos_tmp);
+        for (int i = 0; i < 3; i++)
+        {
+            ref_local_enu_pos[i] = ref_local_enu_pos_tmp[i] + init_rel_local_enu_pos[i];
+        }
         tf::vectorMsgToEigen(msg->velocity, ref_local_enu_vel);
         tf::vectorMsgToEigen(msg->acceleration, ref_local_enu_acc);
         
     }
-    tf::pointMsgToEigen(msg->position, ref_local_enu_pos);
 
-    ref_local_yaw = msg->yaw;
+    else
+    {
+        tf::pointMsgToEigen(msg->position, ref_local_enu_pos);
+        tf::vectorMsgToEigen(msg->velocity, ref_local_enu_vel);
+        tf::vectorMsgToEigen(msg->acceleration, ref_local_enu_acc);
+        ref_local_yaw = msg->yaw;
+    }
+
 }
 
 bool OffboardNode::resetInitGlobalPoseCallback(px4_offb_ctrl::setInitGlobalPose::Request& req,
@@ -536,13 +561,7 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
                 ref_global_yaw = y;
                 convertGlobal2Local();
             }
-            if (_use_external_rel_pub)
-            {
-                if (init_rel_local_enu_pos.z() < 0.5)
-                {
-                    init_rel_local_enu_pos = init_rel_local_enu_pos;
-                }
-            }
+
             sendCommand();
         }
         default:

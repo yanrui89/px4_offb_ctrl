@@ -70,6 +70,7 @@ class OffboardNode
     ros::Subscriber uav_local_enu_vel_sub;
     ros::Subscriber planner_state_sub;
     ros::Subscriber user_start_sub;
+    ros::Subscriber store_rel_pose_sub;
     ros::Publisher att_tgt_pub;
     ros::Publisher pos_tgt_pub;
     ros::Publisher uav_state_pub;
@@ -105,7 +106,7 @@ class OffboardNode
     geometry_msgs::PoseStamped global_nwu_pose_msg;
     nav_msgs::Odometry global_nwu_odom_msg;
 
-    Eigen::Vector3d ref_local_enu_pos, ref_local_enu_vel, ref_local_enu_acc, init_rel_local_enu_pos;
+    Eigen::Vector3d ref_local_enu_pos, ref_local_enu_vel, ref_local_enu_acc, init_rel_local_enu_pos, ref_local_enu_pos_tmp;
     Eigen::Vector3d ref_global_nwu_pos, ref_global_nwu_vel, ref_global_nwu_acc;
     double ref_local_yaw, ref_global_yaw;
     Eigen::Vector4d cmdBodyRate_;
@@ -215,6 +216,7 @@ public:
     void visualize_log_path();
     geometry_msgs::Point vector_to_point(Eigen::Vector3d v);
     void usrStartCallback(const std_msgs::Bool& msg);
+    void usrStoreRelPoseCallback(const std_msgs::Bool& msg);
 
     inline void getStateString(std::string& state)
     {

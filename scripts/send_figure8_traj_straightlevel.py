@@ -8,6 +8,8 @@ from trajectory_msgs.msg import JointTrajectory
 from quadrotor_msgs.msg import PositionCommand
 from mavros_msgs.msg import PositionTarget
 from std_msgs.msg import Bool
+from mavros_msgs.msg import State
+from px4_offb_ctrl.srv import takeoffExternal, takeoffExternalResponse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -175,22 +177,35 @@ class Trajectory:
 
 
 class FlyTrajectory:
-    def __init__(self, wp_dir, drone_id):
+    def __init__(self, wp_dir):
 
         self.cmd_3d = []
         self.traj = Trajectory()
-        self.traj.loadcsv(wp_dir)
+        # self.traj.loadcsv(wp_dir)
+        with open(wp_dir,"r") as f:
+           self.lines = f.readlines()
 
-        self.hgt = 0
+        parse_lines = self.parse_txt_file(self.lines)
+        self.idx = 0
+        self.total_wp = 0
+
+        self.hgt = 1
         self.ate = 30
+        self.ready = True
         #rospy.init_node('waypoint_publisher'+drone_id, anonymous=True)
+        self.store_rel_pose = rospy.Publisher('/usr_store', Bool, latch=True, queue_size = 20)
         self.pubOnePt = rospy.Publisher('/trajectory/points', JointTrajectory, latch=True, queue_size=20)
         self.pubTraj = rospy.Publisher('planning/pos_cmd', PositionCommand, latch=True, queue_size=20)
-        self.subStart = rospy.Subscriber('/drone' + drone_id + '/start_publish', Bool, self.callback1 )
-        self.subExe = rospy.Subscriber('/drone' + drone_id + '/start_execute', Bool, self.callback5 )
-        self.store_rel_pose = rospy.Publisher('/usr_store', Bool, latch=True, queue_size = 20)
+        self.subStart = rospy.Subscriber('/start_publish', Bool, self.callback1 )
+        self.subExe = rospy.Subscriber('/start_execute', Bool, self.callback5 )
+        # self.uav_state = rospy.Subscriber('/mavros/state', State, self.callback5)
+        # self.pub_timer = rospy.Timer(rospy.Duration(0.05), self.waypoint_publisher2)
         # self.subPoseWorld = rospy.Subscriber('/drone0/mavros/local_position/pose',self.callback2)
         # self.refGoalWorld = rospy.Subscriber('/drone0/goal',self.callback3)
+
+
+        #### Service especially for takeoff
+        # self.takeoffService = rospy.Service('/external_takeoff', takeoffExternal, self.takeoffServiceCallback)
 
         self.max_vel = 0
 
@@ -237,18 +252,60 @@ class FlyTrajectory:
 
         end_sleep = rospy.Rate(1) # 0.5hz
 
-        
+    def takeoffServiceCallback(self, req):
+        if req.to_takeoff.data == True:
+          print("Received takeoff Service. Proceeding to take off")
+          res_msg = Bool()
+          res_msg.data = True
+          self.ready = True
+          return takeoffExternalResponse(res_msg)
+        else:
+          print("Received takeoff Service. Not taking off")
 
+          res_msg = Bool()
+          res_msg.data = False
+          return takeoffExternalResponse(res_msg)
+        
+        
+    def parse_txt_file(self, lines):
+      total_lines = len(lines)
+      pos_list = []
+      vel_list = []
+      acc_list = []
+      for i in range(total_lines):
+        curr_line = lines[i]
+        curr_line_split_tmp = curr_line.split("\n")
+        curr_line_split = curr_line_split_tmp[0].split(" ")
+        curr_pos_array = np.zeros(3)
+        curr_vel_array = np.zeros(3)
+        curr_acc_array =np.zeros(3)
+        for j in range(3):
+            curr_pos_array[j] = float(curr_line_split[j])
+            curr_vel_array[j] = float(curr_line_split[j+3])
+            curr_acc_array[j] = float(curr_line_split[j+6])
+        
+        pos_list.append(curr_pos_array)
+        vel_list.append(curr_vel_array)
+        acc_list.append(curr_acc_array)
+
+      
+      self.pos_array = np.array(pos_list)
+      self.vel_array = np.array(vel_list)
+      self.acc_array = np.array(acc_list)
+
+      self.total_wp = total_lines
+      
+      
         
     def callback5(self, data):
-        if data.data == True:
+        if self.ready == True:
+            # time.sleep(2)
             store_rel_pose_msg = Bool()
             store_rel_pose_msg.data = True
             self.store_rel_pose.publish(store_rel_pose_msg)
             time.sleep(1)
             self.waypoint_publisher()
-            print("look here")
-            print(self.max_vel)
+            self.ready = False
         else:
             return
 
@@ -275,47 +332,45 @@ class FlyTrajectory:
     def waypoint_publisher(self):
         start_time = rospy.get_time()
         state_msg = PositionCommand()
-        while True:
+
+        for i in range(len(self.lines)):
+
             t = rospy.get_time() - start_time
             print(t)
-            if t > self.traj.duration:
-                break
 
-            e = self.traj.eval(t)
             state_msg.header.stamp = rospy.Time.now()
-            state_msg.position.x = e.pos[0]
-            state_msg.position.y = e.pos[1]
+            state_msg.position.x = self.pos_array[i,0]
+            state_msg.position.y = self.pos_array[i,1]
             #print(f'The python position for x is {e.pos[0]} and for y is {e.pos[1]}')
-            state_msg.position.z = self.hgt
-            state_msg.velocity.x = e.vel[0]
-            state_msg.velocity.y = e.vel[1]
-            state_msg.velocity.z = e.vel[2]
-            state_msg.acceleration.x = e.acc[0]
-            state_msg.acceleration.y = e.acc[1]
-            state_msg.acceleration.z = e.acc[2]
-            state_msg.yaw = e.yaw
+            state_msg.position.z = self.pos_array[i,2]
+            state_msg.velocity.x = self.vel_array[i,0]
+            state_msg.velocity.y = self.vel_array[i,1]
+            state_msg.velocity.z = self.vel_array[i,2]
+            state_msg.acceleration.x = self.acc_array[i,0]
+            state_msg.acceleration.y = self.acc_array[i,1]
+            state_msg.acceleration.z = self.acc_array[i,2]
+            state_msg.yaw = 0
 
-            print(f'The python position for x is {e.pos[0]} and for y is {e.pos[1]}')
-            abs_velocity = np.sqrt(e.vel[0]*e.vel[0] + e.vel[1]*e.vel[1])
+            print(f'The python position for x is {state_msg.position.x} and for y is {state_msg.position.y} and z is {state_msg.position.z}')
 
-            print(f'The python absolute velocity is {abs_velocity}')
 
-            if abs_velocity > self.max_vel:
-                self.max_vel = abs_velocity
+            # print(f'The python absolute velocity is {abs_velocity}')
+
+            # if abs_velocity > self.max_vel:
+            #     self.max_vel = abs_velocity
 
             self.pubTraj.publish(state_msg)
-            rospy.sleep(0.01)
+            rospy.sleep(0.05)
 
 
-def main(wp_dir, drone_id):
+def main(wp_dir):
     rospy.init_node('trajectory_generator')
-    ft = FlyTrajectory(wp_dir, drone_id)
+    ft = FlyTrajectory(wp_dir)
     rospy.spin()
     
 
 
 
 if __name__ == '__main__':
-    waypoint_dir = '/home/yanrui89/storage/crazyswarm2/crazyflie_examples/crazyflie_examples/data/figure8.csv'
-    drone_id = sys.argv[1]
-    main(waypoint_dir, drone_id)
+    waypoint_dir = '/home/yanrui89/storage/catkin_offb/src/px4_offb_ctrl/data/straight_ahead.txt'
+    main(waypoint_dir)

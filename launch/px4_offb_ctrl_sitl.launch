@@ -19,7 +19,7 @@
 
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
-    <arg name="use_local_frame" default="false"/>
+    <arg name="use_local_frame" default="true"/>
     <arg name="takeoff_height" default="1.0"/>
     <arg name="use_px4_ctrl" default="true"/>
     <arg name="px4_ctrl_mode" default="pva"/>
@@ -77,6 +77,8 @@
         <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
         <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
         <param name="use_bspline" value="$(arg use_bspline)"/>
+        <param name="use_external_pub" value="$(arg use_external_pub)"/>
+        <param name="use_external_rel_pub" value="$(arg use_external_rel_pub)"/>
         <param name="order" value="$(arg order)"/>
         <param name="max_velocity" value="$(arg max_velocity)"/>
         <param name="knot_division" value="$(arg knot_division)"/>
