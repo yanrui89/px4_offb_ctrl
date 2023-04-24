@@ -8,3 +8,7 @@ go inside the quadrotor_msgs folder and in command line:
 `sudo make install`
 
 Then source the devel setup.bash before building this offb package
+
+
+Missing genmsg use this command:
+`sudo apt-get install -y python-genmsg`
