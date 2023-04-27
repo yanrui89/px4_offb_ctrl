@@ -203,7 +203,7 @@ class FlyTrajectory:
         self.pubTraj = rospy.Publisher('planning/pos_cmd', PositionCommand, latch=True, queue_size=20)
         self.subStart = rospy.Subscriber('/start_publish', Bool, self.callback1 )
         self.subExe = rospy.Subscriber('/start_execute', Bool, self.callback5 )
-        self.glob_nwu_sub = rospy.Subscriber('/global_nwu_pose', PoseStamped, self.globsubCallback)
+        self.glob_nwu_sub = rospy.Subscriber('/drone0/mavros/local_position/pose', PoseStamped, self.globsubCallback)
         self.glob_path_pub = rospy.Publisher('global_rel_path', Path, latch=True, queue_size=20)
         self.change_wp_dir_sub = rospy.Subscriber('/start_chg_wp', Bool, self.chgwpdirCallback)
         # self.uav_state = rospy.Subscriber('/mavros/state', State, self.callback5)
@@ -276,8 +276,9 @@ class FlyTrajectory:
 
 
     def globsubCallback(self,msg):
-       if self.ready:
-          self.path.poses.append(msg)
+       
+        self.path.poses.append(msg)
+        self.glob_path_pub.publish(self.path)
 
     def takeoffServiceCallback(self, req):
         if req.to_takeoff.data == True:
