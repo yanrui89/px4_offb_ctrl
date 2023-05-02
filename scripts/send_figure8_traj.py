@@ -180,6 +180,7 @@ class FlyTrajectory:
         self.cmd_3d = []
         self.traj = Trajectory()
         self.traj.loadcsv(wp_dir)
+        self.yaw_rate = 0.1 #rad/s
 
         self.hgt = 0
         self.ate = 30
@@ -293,12 +294,13 @@ class FlyTrajectory:
             state_msg.acceleration.x = e.acc[0]
             state_msg.acceleration.y = e.acc[1]
             state_msg.acceleration.z = e.acc[2]
-            state_msg.yaw = e.yaw
+            # state_msg.yaw = e.yaw
+            state_msg.yaw = self.yaw_rate * t
 
             print(f'The python position for x is {e.pos[0]} and for y is {e.pos[1]}')
             abs_velocity = np.sqrt(e.vel[0]*e.vel[0] + e.vel[1]*e.vel[1])
 
-            print(f'The python absolute velocity is {abs_velocity}')
+            print(f'The python absolute yaw is {state_msg.yaw}')
 
             if abs_velocity > self.max_vel:
                 self.max_vel = abs_velocity

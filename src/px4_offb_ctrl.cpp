@@ -275,7 +275,7 @@ void OffboardNode::localENUTrajRefCallback(const quadrotor_msgs::PositionCommand
         tf2::Matrix3x3 traj_enu_tf2_rot(traj_enu_tf2_q);
         double r, p, y;
         traj_enu_tf2_rot.getRPY(r, p, y);
-        ref_local_yaw = y;
+        ref_local_yaw = y + msg->yaw;
         tf::pointMsgToEigen(msg->position, ref_local_enu_pos_tmp);
         for (int i = 0; i < 3; i++)
         {
