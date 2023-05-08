@@ -2,7 +2,7 @@
 
 OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
 {
-    state_ = UAVState::INIT;
+    state_ = UAVState::MISSION;
     set_init_local_pose = false;
     reset_init_global_pose = false;
     set_takeoff_ref = false;
@@ -560,6 +560,30 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
                 init_tf2_nwu_rot.getRPY(r, p, y);
                 ref_global_yaw = y;
                 convertGlobal2Local();
+            }
+
+            if (!set_init_local_pose)
+            {
+                ref_local_enu_pos << uav_local_enu_pos.x(), 
+                                     uav_local_enu_pos.y(),
+                                     uav_local_enu_pos.z();
+
+                ref_local_enu_vel.setZero();
+                ref_local_enu_acc.setZero();
+
+                tf2::Quaternion q(
+                    uav_local_att(1),
+                    uav_local_att(2),
+                    uav_local_att(3),
+                    uav_local_att(0)
+                );
+
+                tf2::Matrix3x3 m(q);
+                double r, p, y;
+                m.getRPY(r, p, y);
+                ref_local_yaw = y;
+
+                set_init_local_pose = true;
             }
 
             sendCommand();

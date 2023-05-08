@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="_uav_idx" value="6" />
-    <arg name="_fcu_url" value="/dev/ttyAML0:230400" />
-    <arg name="_gcs_url" value="udp://@192.168.31.193" /> <!-- zt laptop -->
+    <arg name="_fcu_url" value="/dev/ttyUSB0" />
+    <arg name="_gcs_url" value="udp://@127.0.0.1" /> <!-- zt laptop -->
 
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>

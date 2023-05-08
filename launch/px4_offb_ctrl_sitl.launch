@@ -19,7 +19,7 @@
 
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
-    <arg name="use_local_frame" default="true"/>
+    <arg name="use_local_frame" default="false"/>
     <arg name="takeoff_height" default="1.0"/>
     <arg name="use_px4_ctrl" default="true"/>
     <arg name="px4_ctrl_mode" default="pva"/>
@@ -33,7 +33,7 @@
     <arg name="knot_division" default="8"/>
 
     <!-- Use External Pub configs -->
-    <arg name="use_external_pub" default="false"/>
+    <arg name="use_external_pub" default="true"/>
     <arg name="use_external_rel_pub" default="true"/>
 
     <!-- vehicle configs -->
