@@ -545,6 +545,11 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
         }
         case UAVState::MISSION:
         {
+
+            if (!user_start){
+                return;
+            }     
+            
             if (reset_init_global_pose)
             {
                 ref_global_nwu_pos = init_body_to_global_homo.translation();
@@ -570,6 +575,8 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
 
                 ref_local_enu_vel.setZero();
                 ref_local_enu_acc.setZero();
+
+                std::cout << uav_local_enu_pos.x() << "\n" << uav_local_enu_pos.y() << "\n" << uav_local_enu_pos.z() << "\n";
 
                 tf2::Quaternion q(
                     uav_local_att(1),
