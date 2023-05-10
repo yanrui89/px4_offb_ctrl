@@ -28,6 +28,9 @@ OffboardNode::OffboardNode(ros::NodeHandle& nh) : _nh(nh), tfListener(tfBuffer)
     _nh.param<bool>("use_external_pub", _use_external_pub, true);
     _nh.param<bool>("use_external_rel_pub", _use_external_rel_pub, true);
 
+    /** @brief External Publisher params*/
+    _nh.param<double>("map_scaling", _map_scaling, 2.0);
+
     /** @brief Control gains**/
     _nh.param<double>("gains/p_x", Kpos_x_, 8.0);
     _nh.param<double>("gains/p_y", Kpos_y_, 8.0);
@@ -203,6 +206,8 @@ void OffboardNode::convertGlobal2Local()
     Eigen::Affine3d traj_nwu_homo = Eigen::Affine3d::Identity();
 
     traj_nwu_homo.translation() = ref_global_nwu_pos;
+    traj_nwu_homo.translation()[0] = traj_nwu_homo.translation()[0] / _map_scaling;
+    traj_nwu_homo.translation()[1] = traj_nwu_homo.translation()[1] / _map_scaling;
     traj_nwu_homo.linear() = Eigen::Quaterniond(traj_nwu_q.getW(),
                                                 traj_nwu_q.getX(),
                                                 traj_nwu_q.getY(),
@@ -210,6 +215,7 @@ void OffboardNode::convertGlobal2Local()
     
     Eigen::Affine3d traj_enu_homo = global_to_local_homo * traj_nwu_homo;
     ref_local_enu_pos = traj_enu_homo.translation();
+    std::cout << ref_local_enu_pos.x() << "," << ref_local_enu_pos.y() << "\n";
     Eigen::Quaterniond traj_enu_q(traj_enu_homo.linear());
     tf2::Quaternion traj_enu_tf2_q(traj_enu_q.x(),
                                    traj_enu_q.y(),
@@ -220,8 +226,8 @@ void OffboardNode::convertGlobal2Local()
     traj_enu_tf2_rot.getRPY(r, p, y);
     ref_local_yaw = y;
 
-    ref_local_enu_vel = global_to_local_homo.linear() * ref_global_nwu_vel;
-    ref_local_enu_acc = global_to_local_homo.linear() * ref_global_nwu_acc;
+    ref_local_enu_vel = global_to_local_homo.linear() * ref_global_nwu_vel / _map_scaling;
+    ref_local_enu_acc = global_to_local_homo.linear() * ref_global_nwu_acc / _map_scaling;
 }
 
 void OffboardNode::uavENUVelCallback(const geometry_msgs::TwistStamped::ConstPtr& msg)
@@ -249,7 +255,10 @@ void OffboardNode::globalNWUTrajRefCallback(const quadrotor_msgs::PositionComman
         if (use_fastplanner)
         {
             if (planning_state == 0 || planning_state == 1)
+            {
+                std::cout<< "In here\n";
                 return;
+            }
         }
 
         reset_init_global_pose = false;
@@ -343,8 +352,8 @@ void OffboardNode::TFListenerTimerCallback(const ros::TimerEvent& e)
 
     global_nwu_pose_msg.header.stamp = ros::Time::now();
     global_nwu_odom_msg.header.frame_id = "global_nwu";
-    global_nwu_pose_msg.pose.position.x = body2global_transformStamped.transform.translation.x;
-    global_nwu_pose_msg.pose.position.y = body2global_transformStamped.transform.translation.y;
+    global_nwu_pose_msg.pose.position.x = body2global_transformStamped.transform.translation.x * _map_scaling;
+    global_nwu_pose_msg.pose.position.y = body2global_transformStamped.transform.translation.y * _map_scaling;
     global_nwu_pose_msg.pose.position.z = body2global_transformStamped.transform.translation.z;
     global_nwu_pose_msg.pose.orientation.w = body2global_transformStamped.transform.rotation.w;
     global_nwu_pose_msg.pose.orientation.x = body2global_transformStamped.transform.rotation.x;
@@ -355,8 +364,8 @@ void OffboardNode::TFListenerTimerCallback(const ros::TimerEvent& e)
     global_nwu_odom_msg.header.stamp = ros::Time::now();
     global_nwu_odom_msg.header.frame_id = "global_nwu";
     global_nwu_odom_msg.child_frame_id = "body";
-    global_nwu_odom_msg.pose.pose.position.x = body2global_transformStamped.transform.translation.x;
-    global_nwu_odom_msg.pose.pose.position.y = body2global_transformStamped.transform.translation.y;
+    global_nwu_odom_msg.pose.pose.position.x = body2global_transformStamped.transform.translation.x * _map_scaling;
+    global_nwu_odom_msg.pose.pose.position.y = body2global_transformStamped.transform.translation.y * _map_scaling;
     global_nwu_odom_msg.pose.pose.position.z = body2global_transformStamped.transform.translation.z;
     global_nwu_odom_msg.pose.pose.orientation.w = body2global_transformStamped.transform.rotation.w;
     global_nwu_odom_msg.pose.pose.orientation.x = body2global_transformStamped.transform.rotation.x;
@@ -364,8 +373,8 @@ void OffboardNode::TFListenerTimerCallback(const ros::TimerEvent& e)
     global_nwu_odom_msg.pose.pose.orientation.z = body2global_transformStamped.transform.rotation.z;
 
     uav_global_nwu_vel = init_local_to_global_homo.linear() * uav_local_enu_vel;
-    global_nwu_odom_msg.twist.twist.linear.x = uav_global_nwu_vel.x();
-    global_nwu_odom_msg.twist.twist.linear.y = uav_global_nwu_vel.y();
+    global_nwu_odom_msg.twist.twist.linear.x = uav_global_nwu_vel.x() * _map_scaling;
+    global_nwu_odom_msg.twist.twist.linear.y = uav_global_nwu_vel.y() * _map_scaling;
     global_nwu_odom_msg.twist.twist.linear.z = uav_global_nwu_vel.z();
 
     uav_global_nwu_angvel = init_local_to_global_homo.linear() * uav_local_enu_angvel;
@@ -552,7 +561,10 @@ void OffboardNode::missionTimerCallback(const ros::TimerEvent& e)
             
             if (reset_init_global_pose)
             {
+                std::cout << "This is ref_global_nwu_pos," << ref_global_nwu_pos.x() << ", " << ref_global_nwu_pos.y() << "\n";
                 ref_global_nwu_pos = init_body_to_global_homo.translation();
+                ref_global_nwu_pos.x() = ref_global_nwu_pos.x() * _map_scaling;
+                ref_global_nwu_pos.y() = ref_global_nwu_pos.y() * _map_scaling;
                 ref_global_nwu_vel.setZero();
                 ref_global_nwu_acc.setZero();
                 Eigen::Quaterniond init_global_nwu_att(init_body_to_global_homo.linear());

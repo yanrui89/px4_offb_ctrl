@@ -23,8 +23,12 @@
     <arg name="takeoff_height" default="1.0"/>
     <arg name="use_px4_ctrl" default="true"/>
     <arg name="px4_ctrl_mode" default="pva"/>
-    <arg name="use_fastplanner" default="false"/>
+    <arg name="use_fastplanner" default="true"/>
     <arg name="Tf" default="0.3"/>
+
+    <!-- map scaling -->
+
+    <arg name="map_scaling" default="5.0"/>
 
     <!-- Bspline configs -->
     <arg name="use_bspline" default="false"/>
@@ -33,8 +37,8 @@
     <arg name="knot_division" default="8"/>
 
     <!-- Use External Pub configs -->
-    <arg name="use_external_pub" default="true"/>
-    <arg name="use_external_rel_pub" default="true"/>
+    <arg name="use_external_pub" default="false"/>
+    <arg name="use_external_rel_pub" default="false"/>
 
     <!-- vehicle configs -->
     <arg name="x" value="0"/>
@@ -76,6 +80,7 @@
         <param name="takeoff_height" value="$(arg takeoff_height)"/>
         <param name="use_fastplanner" value="$(arg use_fastplanner)"/>
         <param name="px4_ctrl_mode" value="$(arg px4_ctrl_mode)"/>
+        <param name="map_scaling" value="$(arg map_scaling)"/>
         <param name="use_bspline" value="$(arg use_bspline)"/>
         <param name="use_external_pub" value="$(arg use_external_pub)"/>
         <param name="use_external_rel_pub" value="$(arg use_external_rel_pub)"/>
