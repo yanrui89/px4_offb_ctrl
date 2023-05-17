@@ -20,7 +20,7 @@
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
     <arg name="use_local_frame" default="false"/>
-    <arg name="takeoff_height" default="1.5"/>
+    <arg name="takeoff_height" default="1.5 "/>
     <arg name="use_px4_ctrl" default="true"/>
     <arg name="px4_ctrl_mode" default="pva"/>
     <arg name="use_fastplanner" default="true"/>
