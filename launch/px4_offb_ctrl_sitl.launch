@@ -89,6 +89,9 @@
         <!-- <remap from="/local_enu_traj" to="/pva_cmd" if="$(arg use_local_frame)"/>
         <remap from="/global_nwu_traj" to="/pva_cmd" unless="$(arg use_local_frame)"/>     -->
 
+        <remap from="/global_nwu_odom" to="$(arg odom topic)" unless="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_pose" to="/drone1/global/nwu_pose"/>
+
         <param name="gains/p_x" value="6.0" />
         <param name="gains/p_y" value="6.0" />
         <param name="gains/p_z" value="10.0" />
