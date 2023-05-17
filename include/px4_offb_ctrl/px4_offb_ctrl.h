@@ -175,6 +175,8 @@ class OffboardNode
     bool _takeoff_sent;
     bool _use_external_rel_pub;
 
+    double _map_scaling;
+
 
     time_point<std::chrono::system_clock> stime; // start time for bspline server in time_t
     vector<double> timespan;

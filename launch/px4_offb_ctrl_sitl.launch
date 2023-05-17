@@ -19,11 +19,11 @@
 
     <!-- PX4 configs -->
     <arg name="interactive" default="true"/>
-    <arg name="use_local_frame" default="true"/>
-    <arg name="takeoff_height" default="1.0"/>
+    <arg name="use_local_frame" default="false"/>
+    <arg name="takeoff_height" default="1.5"/>
     <arg name="use_px4_ctrl" default="true"/>
     <arg name="px4_ctrl_mode" default="pva"/>
-    <arg name="use_fastplanner" default="false"/>
+    <arg name="use_fastplanner" default="true"/>
     <arg name="Tf" default="0.3"/>
 
     <!-- Bspline configs -->
@@ -35,6 +35,13 @@
     <!-- Use External Pub configs -->
     <arg name="use_external_pub" default="false"/>
     <arg name="use_external_rel_pub" default="true"/>
+
+    <!-- Odom Topics-->
+    <arg name="odom_topic" value="/mavros/local_position/odom" if="$(arg use_local_frame)"/>
+    <arg name="odom_topic" value="/global_nwu_odom" unless="$(arg use_local_frame)"/>
+
+    <!-- Map Scaling configs -->
+    <arg name="map_scaling" default="2.0"/>
 
     <!-- vehicle configs -->
     <arg name="x" value="0"/>
@@ -82,14 +89,16 @@
         <param name="order" value="$(arg order)"/>
         <param name="max_velocity" value="$(arg max_velocity)"/>
         <param name="knot_division" value="$(arg knot_division)"/>
+        <param name="map_scaling" value="$(arg map_scaling)"/>
         <remap from="/planning/state" to="/planning/exec_state"/>
+
 
         <remap from="/local_enu_traj" to="/planning/pos_cmd" if="$(arg use_local_frame)"/>
         <remap from="/global_nwu_traj" to="/planning/pos_cmd" unless="$(arg use_local_frame)"/>     
         <!-- <remap from="/local_enu_traj" to="/pva_cmd" if="$(arg use_local_frame)"/>
         <remap from="/global_nwu_traj" to="/pva_cmd" unless="$(arg use_local_frame)"/>     -->
 
-        <remap from="/global_nwu_odom" to="$(arg odom topic)" unless="$(arg use_local_frame)"/>
+        <remap from="/global_nwu_odom" to="$(arg odom_topic)" unless="$(arg use_local_frame)"/>
         <remap from="/global_nwu_pose" to="/drone1/global/nwu_pose"/>
 
         <param name="gains/p_x" value="6.0" />
